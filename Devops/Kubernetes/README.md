@@ -19,7 +19,7 @@
   5.2. [Labels](#Labels) \
   5.3. [Selector](#Selector) \
   5.4. [Namespace](#Namespace)
-
+6. [Vòng đời của Pod](#PodLifecycle)
 
 ## 1. Tính năng và kiến trúc của Kubernetes <a name="feature-ark"></a>
 
@@ -339,7 +339,7 @@ spec:
 
 **6.1. Sử dụng ConfigMaps** \
 Cách thức hoạt động là cấu hình được xác định trong đối tượng ConfigMaps, sau đó được tham chiếu trong Pod (hoặc Deployment).
-Dưới đây các cách được dùng thể tạo ConfigMap \
+Dưới đây các cách được dùng thể tạo ConfigMap 
 - Sử dụng manifest file
 ```yaml
 apiVersion: v1
@@ -442,7 +442,7 @@ spec:
 ## 4. Sử dụng câu lệnh vs khai báo yaml trong K8s <a name="Imperative-Declare"></a>
 
 ### 4.1. Các lệnh cơ bản <a name="Imperative"></a>
-Syntax: \
+Syntax: 
 
 ``` yaml
 kubectl create <objecttype> [<subtype>] <name> : # Tạo các đối tượng trong K8s
@@ -517,7 +517,7 @@ Ví dụ:
 ## 5. Các thành phần trong đối tượng của Kubernetes <a name="componentOfObject"></a>
 ### 5.1 Object Name <a name="objectName"></a>
 *Mỗi một object trong Kubernetes đều phải có `Name` phải là duy nhất đối với từng loại tài nguyên trong cùng 1 namespace. Có nghĩa là chúng ta chỉ có 1 Pod có tên "mynginx" trong cùng 1 namespace. Tuy nhiên, chúng ta có thể sử dụng cùng tên cho các loại đối tượng khác nhau như Deployment, Service, Pod, ...* \
-Các chú ý cần được tuân thủ khi đặt tên đối tượng trong K8s: \
+Các chú ý cần được tuân thủ khi đặt tên đối tượng trong K8s: 
 - Tên không vượt quá 255 ký tự
 - Chỉ chứa các ký tự thường chữ hoặc số (a->z), dấu gạch ngang (-), dấu chấm (.)
 - Nên bắt đầu/ kết thúc bằng chữ hoặc số.
@@ -659,3 +659,5 @@ metadata:
 // setting namespace preference for kubectl subsequent commands in the current session
 > kubectl config set-context --current --namespace=my-name
 ```
+
+## 6. Vòng đời của Pod <a name="PodLifecycle"></a>
