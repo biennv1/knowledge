@@ -661,3 +661,106 @@ metadata:
 ```
 
 ## 6. Vòng đời của Pod <a name="PodLifecycle"></a>
+*Pod là một tập hợp của một hoặc nhiều container với việc chia sẻ lưu trữ và tài nguyên mạng.*
+- Network: Pods có 1 địa chỉ IP tự động duy nhất, tất cả các container trong pod sẽ trao đổi với nhau thông qua localhost và Port.
+- Storage: Pods có thể được đính kèm tới Volumes cái mà có thể chia sẻ giữa các container.
+
+### *Pod lifecycle*:
+
+Pod được thiết kế không bền bỉ, khi Pod dừng hoạt động nó không thể tự sửa chữa mà bị xóa đi và tạo lại theo chính sách của Pod. \
+![Pod lifecycle](./assets/images/Pod-Lifecycle.PNG)
+
+Vòng đời của Pod đi từ `Pedning`, chuyển qua `Running` nếu có ít nhất 1 container trong nó hoạt động và sau sẽ chuyển qua `Succeded` or `Failed` phụ thuộc vào trạng thái của container trong nó. \
+Các trạng thái của Pod được chuyển khi nào?
+- Kubelet liên tục quản lý trạng thái của container và gửi thông tin lại cho KubeAPI Server để cập nhật lại trạng thái của Pod.
+- Kubelet dừng báo cáo tới KubeAPI Server.
+
+|||
+| -----------  | ----------- |
+| Pending      | Ở trạng thái này Pod đã được tạo ra bởi cluster, nhưng chưa có container nào được chạy, Giai đoạn này bao gồm thời gian được lên lịch trên một node và tải xuống images|
+| Running      | Pod đã được liên kết với một Node và tất cả các container đã được tạo. Ít nhất một container vẫn đang chạy hoặc đang trong quá trình khởi động hoặc khởi động lại.|
+| Succeeded	   | Tất cả các container trong Pod đã kết thúc thành công và không khởi động lại        |
+| Failed	   | Tất cả các container trong Pod đã kết thúc, có ít nhất một container kết thúc bị lỗi. Đó là, container đã thoát với trạng thái khác 0 hoặc đã bị hệ thống kết thúc.       |
+| Unknown		   | Vì một số lý do không thể lấy được trạng thái của Pod. Giai đoạn này thường xảy ra do lỗi trong giao tiếp với nút nơi Pod sẽ chạy.       |
+
+#### Container states:
+Cách Kubernetes duy trì các pha Pod, nó duy trì trạng thái của từng container trong Pod. Một lần khi scheduler chỉ định Pod cho Node, kubelet bắt đầu tạo container cho Pod đó. Có 3 trạng thái của container.
+
+|||
+| -----------  | ----------- |
+|Waiting       | Khi container đang kéo imange, xác nhận dữ liệu bí mật,... |
+|Running       | Khi container thực thi mà không có bất kỳ sự cố nào |
+|Terminated    | Khi container thoát ra với trạng thái khác 0 |
+
+```
+// Create Pod using imperative way
+> kubectl run pod-nginx --image=nginx 
+```
+
+```yaml
+# Create Pod using Declarative way (.yaml file )
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.14.2
+      ports:
+        - containerPort: 80
+          protocol: TCP
+```
+
+```
+// Create Pod using Declarative way
+> kubectl apply -f ./pod-nginx.yaml
+
+
+// View all running pods and their status
+> kubectl get po
+
+// View specific pod running status
+// syntax: kubectl get po <pod-name>
+> kubectl get po pod-nginx
+
+// Get running Pod definition
+// syntax: kubectl get po <pod-name> -o <outout-format>
+> kubectl get po pod-nginx -o yaml
+
+// Get Pod phase
+> kubectl get po pod-nginx -o yaml | grep phase
+
+// Describe Pod in-detail
+// syntax: kubectl describe po <pod-name>
+> kubectl describe po pod-nginx
+
+// View logs from Pod running container
+// syntax: kubectl logs <pod-name>
+> kubectl logs pod-nginx
+
+// View logs from Pod when multiple running containers
+// syntax: kubectl logs <pod-name> -c <container-name>
+> kubectl logs pod-nginx -c nginx
+
+// Stream logs from Pod
+> kubectl logs -f pod-nginx
+
+// Expose Pod for debugging or testing purpose using port-forward proxy
+// Syntax: kubectl port-forward <pod-name> <host-port>:<container-port>
+// Ex: http://localhost:8444
+> kubectl port-forward pod-nginx 8444:80
+
+// Shell to a running Pod
+> kubectl exec -it pod-nginx –-sh
+
+// Shell to specific container when multiple containers running in the Pod
+// Syntax: kubectl exec -it <pod-name> --container <container-name> –- sh
+> kubectl exec -it pod-nginx --container nginx –-sh
+
+// View last 100 messages from Pod
+> kubectl logs --tail=100 pod-nginx
+
+// Delete a Pod
+> kubectl delete po pod-nginx
+```
