@@ -1,14 +1,31 @@
 # Kubernetes
 
-1. [Tính năng và kiến trúc của Kubernetes](#feature)
+1. [Tính năng và kiến trúc của Kubernetes](#feature-ark) \
+  1.1 [Tính năng](#feature) \
+  1.2 [Kiến trúc & các thành phần](#ark)
 2. [kubectl CLI](#kubectl)
-3. [Các đối tượng trong K8s](#objects)
+3. [Các đối tượng trong K8s](#objects) \
+  3.1 [Pod](#Pod) \
+  3.2 [ReplicationController](#ReplicationController) \
+  3.3 [Replicaset](#Replicaset) \
+  3.4 [Deployment](#Deployment) \
+  3.5 [Namespace](#Namespace1)\
+  3.6 [ConfigMap](#ConfigMap)
+4. [Sử dụng câu lệnh vs khai báo yaml để thực thi trong K8s](#Imperative-Declare) \
+  4.1. [Các lệnh cơ bản](#Imperative) \
+  4.2. [Các khai báo](#Declare)
+5. [Các thành phần trong đối tượng của Kubernetes](#componentOfObject) \
+  5.1. [Object Name](#objectName) \
+  5.2. [Labels](#Labels) \
+  5.3. [Selector](#Selector) \
+  5.4. [Namespace](#Namespace)
 
-## 1. Tính năng và kiến trúc của Kubernetes <a name="feature"></a>
+
+## 1. Tính năng và kiến trúc của Kubernetes <a name="feature-ark"></a>
 
 - *Kubernetes (K8s) là một nền tảng nguồn mở, khả chuyển, có thể mở rộng để quản lý các ứng dụng được đóng gói và các service, giúp thuận lợi trong việc cấu hình và tự động hoá việc triển khai ứng dụng. Kubernetes là một hệ sinh thái lớn và phát triển nhanh chóng. Các dịch vụ, sự hỗ trợ và công cụ có sẵn rộng rãi.*
 
-### 1.1 Tính năng
+### 1.1 Tính năng <a name="feature"></a>
 
 - **Self-Healing**: Khả năng tự khởi động lại những container bị failed hoặc kills những container không có phản hồi tới container health check endpoint. Duy trì số lương replicas (bản sao pods) mà người dùng đã định nghĩa khi khởi tạo.
 - **Secret and configuration management**: Duy trì cấu hình mức ứng dụng và lưu trữ bí mật tại các nơi riêng biệt. Vì thế, các ứng dụng có thể bị thay đổi mà không cần re-building và deploying container.
@@ -18,7 +35,7 @@
 - **Automated rollouts and rollbacks**: Cho phép rollout (phát hành) ứng dụng mới bằng cách tạo một container mới mà không tắt container đang vận hành cho đến khi health check xác nhận. Nó sẽ tự động rollback nếu container không có phản hồi tới health check đã được định nghĩa.
 - **Service discovery and Load balancing**: Nó hoạt động bằng cách sử dụng Labels, Selectors để chọn được liên kết với Pods và Services, đồng thời có thể sử dụng cân bằng tải trên chúng.
 
-### 1.2. Kiến trúc & các thành phần
+### 1.2. Kiến trúc & các thành phần <a name="ark"></a>
 
 ![container](./assets/images/k8architecture.PNG)
 
@@ -183,7 +200,7 @@ spec:
 - **metadata**: Giúp cho việc định danh đối tượng nó bao gồm, tên, label và namespace (optional).
 - **spec**: Nơi mà bạn định nghĩa các trạng thái mong muốn của đối tượng này.
 
-1. **Pod** \
+3.1. **Pod** <a name="Pod"></a> \
 *Là đơn vị cơ bản nhất của Kubernetes cluster. Nó thường chứa 1 hoặc nhiều hơn 1 container. Pod được thiết kế không bền bỉ nó có thể bị xóa bỏ bất cứ lúc nào. Các container trong pod chia sẻ cùng 1 mạng và storage.*
 
 ```yaml
@@ -204,3 +221,441 @@ spec:
 - `name`: Tên của container bạn muốn run trong pod.
 - `image`: image của ứng dụng bạn muốn run trong pod.
 - `ports.containerPort`: Cổng đầu ra ứng dụng của container
+3.2. **ReplicationController** <a name="ReplicationController"></a> \
+*Được sử dụng để tạo ra nhiều instance giống nhau của pod trong cluster. Nó đảm bảo rằng ở bất cứ thời điểm nào, số lượng pod mong muốn được chỉ định đều ở trạng thái running. Nếu 1 pod stops hoặc dies, `ReplicationController` sẽ tạo mới một cái khác thay thế nó.*
+
+```yaml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: myapp
+spec:
+  replicas: 2
+  selector:
+    app: myapp
+  template:
+    metadata:
+      name: first-pod
+      labels:
+        name: first-pod
+    spec:
+      containers:
+        - name: first-pod
+          image: hello-world
+          ports:
+            - containerPort: 8080
+```
+Ở ví dụ trên có `replicas: 2`: điều này chỉ ra rằng sẽ có 2 pod phải chạy trên cluster. Nếu có bất kỳ 1 pod nào hỏng `ReplicationController` sẽ tạo ra 1 pod mới thay thế ngay lập tức. \
+3.3. **Replicaset** <a name="Replicaset"></a> \
+*Được nâng cấp từ ReplicationController*
+
+- ReplicationControllers chỉ có thể được tạo trực tiếp bằng cách cấu hình file yaml hay dùng trực tiếp bằng command line với kubectl. Với ReplicaSets, ngoài cách khởi tạo thông thường giống như ReplicationControllers thì còn có thể được tạo ra tự động khi chúng ta khởi tạo một đối tượng Deployment.
+- ReplicaSets có thể được cấu hình để áp dụng cho nhiều giá trị labels trong cùng một trường. ReplicationControllers thì chỉ có thể áp dụng cho các Pods có một giá trị cho mỗi trường labels. Ví dụ ReplicaSets có thể áp dụng cho các Pods có labels env=production, env=development, v.v còn ReplicationControllers chỉ áp dụng cho các Pods có labels là env=development chẳng hạn.
+```yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: guestbook
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+        - name: php-redis
+          image: gcr.io/google_samples/gb-frontend:v3
+```
+
+3.4. **Deployment** <a name="Deployment"></a> \
+*Nó gói lại cả `Replicaset` và `Pod` để cung cấp hàm khai báo cho định nghĩa tài nguyên \
+Nó được sử dụng để quản lý các pod và sử dụng Replicaset trong nội bộ để tạo ra số lượng pod \
+Được sử dụng đê mở rộng ứng dụng bằng cách tăng số lượng running pods, hoặc cập nhật running application*
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.7.9
+          ports:
+            - containerPort: 80
+```
+
+3.5. **Namespace** <a name="Namespace1"></a> \
+*Được sử dụng để nhóm các Kubernetes Objects trong cluster và các action sẽ được thực hiện với namespace.*
+
+- Vd: Create namespace cho các môi trường hoặc Team
+```yaml
+#For env
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: production
+#_ _ _
+
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: staging
+```
+namespace sẽ được đính kèm với mỗi phần metadata trong định nghĩa Kubernetes Object.
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: first-pod
+  namespace: staging
+  labels:
+    name: first-pod
+    app: hello-world-app
+spec:
+```
+
+3.6. **ConfigMap** <a name="ConfigMap"></a> \
+*Khi bạn quản lý các ứng dụng Deployment/Pod trong Kubernetes, chắc chắn sẽ có nhu cầu cấu hình các biến môi trường cho Pod hoặc khởi tạo file config cho dịch vụ Container theo cách nào đấy linh động nếu ứng dụng của bạn có mặt ở nhiều môi trường khác nhau như UAT/QA/DEV/TESTING. Thì resource ConfigMap trong Kubernetes vô cùng tiện lợi để hỗ trợ bạn những công việc như vậy.*
+
+![Configmap](./assets/images/KubernetesConfigMap.png)
+
+**6.1. Sử dụng ConfigMaps** \
+Cách thức hoạt động là cấu hình được xác định trong đối tượng ConfigMaps, sau đó được tham chiếu trong Pod (hoặc Deployment).
+Dưới đây các cách được dùng thể tạo ConfigMap \
+- Sử dụng manifest file
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: simpleconfig
+data:
+  foo: bar
+  hello: world
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod2
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    env:
+      - name: FOO_ENV_VAR
+        valueFrom:
+          configMapKeyRef:
+            name: simpleconfig
+            key: foo
+      - name: HELLO_ENV_VAR
+        valueFrom:
+          configMapKeyRef:
+            name: simpleconfig
+            key: hello
+```
+Trong manifest trên: 
+  - `ConfigMap` có tên simpleconfig chứa hai phần dữ liệu (khóa-giá trị)  — `hello=world` và `foo=bar`
+  - `simpleconfig` được tham chiếu bởi một Pod (pod2; các khóa `hello` và `foo` được sử dụng như các biến environment `HELLO_ENV_VAR` và `FOO_ENV_VAR` tương ứng.
+
+**6.2. Sử dụng envVar**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config2
+data:
+  FOO_ENV: bar
+  HELLO_ENV: world
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod3
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    envFrom:
+      - configMapRef:
+         name: config2
+```
+
+**6.3. Dữ liệu cấu hình dưới dạng file** \
+*Một cách thú vị khác để sử dụng config data là bằng cách trỏ đến ConfigMap trong phần spec.volumes của thông số Deployment hoặc Pod.*
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: testapp
+spec:
+  selector:
+    matchLabels:
+      app: testapp
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: testapp
+    spec:
+      volumes:
+        - name: config-data-volume
+          configMap:
+            name: app-config
+      containers:
+      - name: testapp
+        image: testapp
+        volumeMounts:
+        - mountPath: /config
+          name: config-data-volume
+```
+
+**6.4. Sử dụng kubectl** 
+- Sử dụng `--from-literal` để seed config data
+ 
+ > $ kubectl create configmap config4 --from-literal=foo_env=bar --from-literal=hello_env=world
+
+- Sử dụng `--from-file`
+ 
+ > $ kubectl create configmap config5 --from-file=/config/app-config.properties
+
+- Từ các file trong một thư mục
+ 
+ > $ kubectl create configmap config7 --from-file=/home/foo/config/
+
+## 4. Sử dụng câu lệnh vs khai báo yaml trong K8s <a name="Imperative-Declare"></a>
+
+### 4.1. Các lệnh cơ bản <a name="Imperative"></a>
+Syntax: \
+
+``` yaml
+kubectl create <objecttype> [<subtype>] <name> : # Tạo các đối tượng trong K8s
+kubectl run:  # Tạo ra pod mới để chạy các container
+kubectl expose: # Tạo mới các đối tượng dịch vụ tạo định tuyến giữa các pods
+kubectl autoscale: # Tạo mới Deployment cho việc tự động mở rộng Pods
+kubectl scale: # Thêm/ xóa Pods bằng cách cập nhật đếm số bản sao 
+kubectl label: # Thêm hoặc xóa nhãn của đối tượng
+kubectl edit: # Sửa cấu hình 
+kubectl delete: # Xóa object khỏi cluster
+kubectl get: # Lấy ra các thông tin của Object
+kubectl describe: # Lấy các thông tin chi tiết của Object
+kubectl logs: # Lấy log của các container đang chạy trong pod
+```
+Ví dụ: 
+```
+> kubectl create ns testnamespace
+> kubectl create deployment nginx --image nginx 
+> kubectl create deployment nginx --image nginx 
+> kubectl run my-helloworld --image helloworld:1.0
+> kubectl get deployment my-helloworld
+> kubectl describe deployment my-helloworld
+> kubectl label deployment my-helloworld foo=bar
+> kubectl expose deployment my-helloworld --port 80 --target-port 3000
+> kubectl logs deployment/my-helloworld
+> kubectl scale deployment my-helloworld –replicas=2
+> kubectl delete deployment/nginx 
+```
+
+### 4.2. Các khai báo <a name="Declare"></a>
+
+```yaml
+kubectl create -f <filename|url>: # used for creating an object from a specified file
+kubectl replace -f <filename|url>: # used for updating a live object from a specified file
+kubectl delete -f <filename|url>: # used for deleting an object from a specified file
+kubectl get -f <filename|url> -o yaml: # used for viewing info about an object from a specified file
+kubectl apply -f <filename|url> : # used for creating/Updating an object from a specified file
+kubectl apply -f <directory> : # used for creating/Updating all objects specified in the directory
+```
+Ví dụ:
+
+```
+> kubectl create -f nginx.yaml
+> kubectl delete -f nginx.yaml -f redis.yaml
+> kubectl replace -f nginx.yaml
+> kubectl get -f nginx.yaml -o yaml
+```
+
+Cách chuyển từ mệnh lệnh sang khai báo: \
+a. Xuất 1 đối tượng đang hoạt động ra file cấu hình:
+
+> kubectl get {`<kind>/<name>`} --export -o yaml > {`<kind>_<name>`}.yaml
+
+Hoặc 
+
+>  kubectl get {`<kind>/<name>`} -o yaml > {`<kind>_<name>`}.yaml
+
+Ví dụ: 
+> kubectl get deployments testnginx --export -o yaml > testnginx2.yaml
+
+Hoặc
+
+> kubectl get deployments testnginx -o yaml > testnginx2.yaml 
+
+b. Xóa trạng thái từ file cấu hình.
+c. Sử dụng lệnh replace
+>   kubectl replace -f `<kind>_<name>`.yaml
+
+Ví dụ:
+> kubectl replace -f testnginx2.yaml 
+
+## 5. Các thành phần trong đối tượng của Kubernetes <a name="componentOfObject"></a>
+### 5.1 Object Name <a name="objectName"></a>
+*Mỗi một object trong Kubernetes đều phải có `Name` phải là duy nhất đối với từng loại tài nguyên trong cùng 1 namespace. Có nghĩa là chúng ta chỉ có 1 Pod có tên "mynginx" trong cùng 1 namespace. Tuy nhiên, chúng ta có thể sử dụng cùng tên cho các loại đối tượng khác nhau như Deployment, Service, Pod, ...* \
+Các chú ý cần được tuân thủ khi đặt tên đối tượng trong K8s: \
+- Tên không vượt quá 255 ký tự
+- Chỉ chứa các ký tự thường chữ hoặc số (a->z), dấu gạch ngang (-), dấu chấm (.)
+- Nên bắt đầu/ kết thúc bằng chữ hoặc số.
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mynginx
+spec:
+```
+### 5.2 Labels <a name="Labels"></a>
+*Là cặp key-value được đính kèm trong các object như pods, deployments, etc.*
+- Nó hoạt động để phục vụ việc định danh các object trong K8s. Các object khác nhau có thể trao đổi thông qua tên label phù hợp.
+- Nó có thể được thêm khi khởi tạo object hoặc cũng có thể sử dụng lệnh để gán vào cho các object đang hoạt động.
+- Cùng 1 nhãn có thể được phân chia cho nhiều K8s objects.
+- Mỗi key trong Label phải là duy nhất.
+- Key, value không vượt quá 63 ký tự các ký tự số, chữ, -, _, . được phép sử dụng để đặt tên key
+```yaml
+metadata:
+  name: pod-label-demo
+  labels:
+    environment: production
+    app: nginx
+```
+Ví dụ: Tạo labels trong Pod
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-label-demo
+  labels:
+    environment: production
+    app: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.14.2
+      ports:
+        - containerPort: 80
+```
+Tạo labels trong Deployment
+```yaml
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: deployment-label-demo
+  labels:
+    environment: production
+    app: nginx
+spec:
+```
+Tìm đối tượng dựa vào labels
+```
+// show all labels on each Pod
+> kubectl get pods --show-labels
+
+// show all labels on each Deployment
+> kubectl get deployments --show-labels
+
+// show all Pods where label app:nginx
+> Kubectl get pods -l app=nginx
+// add label to running Pod
+// syntax
+kubectl label Pod <podname> <key>=<value>
+
+// example
+> kubectl label Pod pod-label-demo tier=frontend
+
+// delete Pods using label
+> kubectl delete pod -l app=nginx
+```
+### 5.3 Selector <a name="Selector"></a>
+*Nó được sử dụng để nhóm các đối tượng trong K8s và thực thi các hoạt động phù hợp. \
+a. Nó được sử dụng trong Deployment để nói chuyện tới các Pods với cặp label cụ thể key/value \
+b. Nó được sử dụng trong Service để nộ ra tất cả Pods với cặp label cụ thể key/value*
+
+Ví dụ: Thêm nhãn trên mẫu Pod và thẻ Selector để xác định tất cả các nhãn Pod trong Deployment
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-nginx-deployment 
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.7.9
+          ports:
+            - containerPort: 80
+```
+### 5.1 Namespace <a name="Namespace"></a>
+*K8s hỗ trợ nhiều virtual cluster bằng cách sử dụng namespace. Nó hưu ích khi nhiều nhóm sử dụng cùng một cụm với sự tách biệt về Role, Binding và Environments của mỗi nhóm.*
+- K8s resource name nên là duy nhất trong 1 namespace, khác namespace thì được.
+- Namespace thì không thể lồng vào nhau.
+- Mỗi K8s resource chỉ có thể trong 1 namespace.
+- Không đặt tên namespace với tiền tố "kube-". Vì nó được dành riêng cho hệ thống K8s.
+- Mặc định mỗi resource được tạo ra sẽ nằm trên "default" namespace.
+
+```
+// create namespace using Imperative way
+> kubectl create namespace my-namespace
+```
+vs
+```yaml
+# create namespace using Declarative way
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: my-namespace
+```
+> kubectl create -f my-namespace.yaml
+
+```yaml
+# create Pod under my-namespace
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-nginx-pod
+  namespace: my-namespace
+```
+```
+// get all namespaces
+> kubectl get namespace
+
+// get all Pods with specific namespace
+> kubectl get pods –namespace=my-namespace
+
+// delete namespace
+> kubectl delete namespace my-namespace
+
+// setting namespace preference for kubectl subsequent commands in the current session
+> kubectl config set-context --current --namespace=my-name
+```
